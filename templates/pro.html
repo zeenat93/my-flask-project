@@ -1,0 +1,44 @@
+<div class="col-md-6">
+  <!-- Navigation links -->
+  <a href="{{ url_for('profile') }}" onclick="showContent(event, 'profile')">Profile</a> |
+  <a href="{{ url_for('register') }}" onclick="showContent(event, 'register')">Register</a>
+
+  <!-- Profile section -->
+  <div id="profile" class="content">
+    <h2>Profile</h2>
+    <p>This is your profile data...</p>
+  </div>
+
+  <!-- Register section -->
+  <div id="register" class="content">
+    <h2>Register</h2>
+    <form>
+      <label>Name:</label>
+      <input type="text" name="name"><br><br>
+      <label>Email:</label>
+      <input type="email" name="email"><br><br>
+      <button type="submit">Submit</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  function showContent(event, section) {
+    // stop the link from navigating away
+    event.preventDefault();
+
+    // hide all
+    document.querySelectorAll('.content').forEach(div => {
+      div.style.display = "none";
+    });
+
+    // show selected
+    document.getElementById(section).style.display = "block";
+  }
+</script>
+
+<style>
+  .content {
+    display: none; /* hide by default */
+  }
+</style>
