@@ -42,6 +42,9 @@
             <a class="nav-link" href="#prescription" onclick="showContent(event, 'prescription')">Add prescription</a>
           </li>
           <li class="nav-item">
+            <a class="nav-link" href="#" onclick="showContent(event, 'view_patient')">Patients</a>
+          </li>
+          <li class="nav-item">
             <a class="nav-link" href="#history">Show Patients</a>
           </li>
         </ul>
@@ -198,6 +201,57 @@
           <input type="submit" class="btn btn-primary">
         </div>
       </form>
+    </div> 
+  <!----view patient-->
+  <div id="view_patient" class="content">
+        <h2 class="text-center mb-4">Patients Records</h2>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th scope="col">First Name</th>
+                        <th scope="col">Last Name</th>
+                        <th scope="col">SSN</th>
+                        <th scope="col">Gender</th>
+                        <th scope="col">Address</th>
+                        <th scope="col">Phone</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Allergies</th>
+                        <th scope="col">Illnesses</th>
+                        <th scope="col">Other Info</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                        {% if patients_all %}
+                            {% for patient in patients_all %}
+                                <tr>
+                                    <!-- Corrected Jinja2 syntax to access dictionary keys -->
+                                    <td>{{ patient['patient_id'] }}</td>
+                                    <td>{{ patient['patient_securitynum'] }}</td>
+                                    <td>{{ patient['patient_fname'] }}</td>
+                                    <td>{{ patient['patient_lname'] }}</td>
+                                    <td>{{ patient['gender'] }}</td>
+                                    <td>{{ patient['patient_address'] }}</td>
+                                    <td>{{ patient['patient_phone'] }}</td>
+                                    <td>{{ patient['patient_email'] }}</td>
+                                    <td>{{ patient['patient_allergies'] }}</td>
+                                    <td>{{ patient['patient_illness'] }}</td>
+                                    <td>{{ patient['patient_treatment'] }}</td>
+                                    <td>
+                                        <button class="btn btn-primary btn-sm">Edit</button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="12" class="text-center">No patient records found. The database table might be empty.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+            </table>
+          
+        </div>
     </div> 
 
   <!-- Bootstrap JS -->

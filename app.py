@@ -56,12 +56,15 @@ def dr_profile():
         query = "SELECT * FROM doctors WHERE doctor_name = %s"
         cursor.execute(query, (username,))
         user_info = cursor.fetchone()
-        conn.close()
+        query_patient = "SELECT * FROM patient" 
+        cursor.execute(query_patient)
+        patients_data = cursor.fetchall()
+       
         if not user_info:
             session.clear()
             flash("User not found. Please log in again.")
             return redirect(url_for('login'))
-        return render_template("dr_profile.html", doctor_info=user_info)
+        return render_template("dr_profile.html", doctor_info=user_info, patients_all=patients_data )
     else:
         return redirect(url_for('login'))
 @app.route('/logout')
@@ -90,9 +93,12 @@ def edit_dr(doctor_id):
     query = "SELECT * FROM doctors WHERE doctor_id = %s"
     cursor.execute(query, (doctor_id,))
     doctor_info = cursor.fetchone()
+    query_patient = "SELECT * FROM patient" 
+    cursor.execute(query_patient)
+    patients_data = cursor.fetchall()
     conn.close()
     flash("Profile updated successfully!")
-    return render_template("dr_profile.html", doctor_info=doctor_info)
+    return render_template("dr_profile.html", doctor_info=doctor_info , patients_all=patients_data)
 @app.route("/register_new_patient", methods =['POST','GET'])
 def patient_registers():
     if request.method == 'POST':
@@ -198,6 +204,33 @@ def add_prescription():
         finally:
             cursor.close()
             conn.close()
+@app.route("/show_patients")
+def show_patients():
+    conn = None
+    cursor = None
+    try:
+        conn = connection()
+        cursor = conn.cursor(dictionary=True)
+        query_patient = "SELECT * FROM patient" 
+        cursor.execute(query_patient)
+        patients_data = cursor.fetchall()
+
+        # >>> ADDED THIS LINE FOR DEBUGGING <<<
+        print("Fetched patients data:", patients_data)
+
+        flash("Here are all the patients.")
+        return render_template('dr_profile.html', patients_all=patients_data)
+    except Exception as e:
+        print(f"An error occurred in show_patients route: {e}")
+        flash(f"Not showing patients data: {e}")
+        # Make sure the `dr_profile` route exists for this redirect to work.
+        return redirect(url_for('dr_profile')) 
+    finally: 
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+       
 if __name__ == "__main__":
     app.run(debug=True)
  
