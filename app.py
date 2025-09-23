@@ -99,7 +99,7 @@ def edit_dr(doctor_id):
     conn.close()
     flash("Profile updated successfully!")
     return render_template("dr_profile.html", doctor_info=doctor_info , patients_all=patients_data)
-@app.route("/register_new_patient", methods =['POST','GET'])
+@app.route("/register_new_patient")
 def patient_registers():
     if request.method == 'POST':
         pid = request.form["pid"]
@@ -230,7 +230,40 @@ def show_patients():
             cursor.close()
         if conn:
             conn.close()
-       
+            
+@app.route("/<int:p_id>/updatepatient", methods=['POST','GET'])
+def  edit_patient(p_id):
+    if request.method== 'POST':
+        Security_number=request.form['Security_number']
+        pf_name=request.form['pf_name']
+        pl_name=request.form['pl_name']
+        p_address=request.form['p_address']
+        p_phone=request.form['p_phone']
+        p_email=request.form['p_email']
+        p_treatment=request.form['p_treatment']
+        try:
+            conn=connection()
+            cursor=conn.cursor(dictionary=True)
+            fetch_sn_query = "SELECT patient_id FROM patient WHERE patient_securitynum = %s AND patient_id != %s"
+            cursor.execute(fetch_sn_query, (Security_number, p_id))
+            existing_patient = cursor.fetchone()
+            if existing_patient is not None:
+                flash("This security number is already in use.")
+                return redirect(url_for('dr_profile'))
+            else:
+                p_query = "UPDATE patient SET patient_securitynum = %s, patient_fname = %s, patient_lname = %s, patient_address = %s, patient_phone = %s, patient_email = %s, patient_treatment = %s WHERE patient_id = %s"
+                cursor.execute(p_query, (Security_number, pf_name, pl_name, p_address, p_phone, p_email, p_treatment, p_id))
+                conn.commit()
+                flash("Patient record is updated successfully.")
+                return redirect(url_for('dr_profile'))
+                
+            
+        except Exception as e:
+            flash(f"this is the error:{e}")
+            return redirect(url_for('dr_profile'))
+        finally:
+            cursor.close()
+            conn.close()
 if __name__ == "__main__":
     app.run(debug=True)
  

@@ -45,7 +45,7 @@
             <a class="nav-link" href="#" onclick="showContent(event, 'view_patient')">Patients</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#history">Show Patients</a>
+            <a class="nav-link" href="#history">Appointment </a>
           </li>
         </ul>
       </div>
@@ -209,16 +209,17 @@
             <table class="table table-bordered table-striped align-middle">
                 <thead class="table-dark">
                     <tr>
-                        <th scope="col">First Name</th>
-                        <th scope="col">Last Name</th>
-                        <th scope="col">SSN</th>
+                        <th scope="col">ID</th>
+                        <th scope="col">Security#</th>
+                        <th scope="col">F Name</th>
+                        <th scope="col">L Name</th>
                         <th scope="col">Gender</th>
                         <th scope="col">Address</th>
-                        <th scope="col">Phone</th>
+                        <th scope="col">Phone#</th>
                         <th scope="col">Email</th>
                         <th scope="col">Allergies</th>
-                        <th scope="col">Illnesses</th>
-                        <th scope="col">Other Info</th>
+                        <th scope="col">Illness</th>
+                        <th scope="col">Treatment</th>
                         <th scope="col">Actions</th>
                     </tr>
                 </thead>
@@ -239,7 +240,8 @@
                                     <td>{{ patient['patient_illness'] }}</td>
                                     <td>{{ patient['patient_treatment'] }}</td>
                                     <td>
-                                        <button class="btn btn-primary btn-sm">Edit</button>
+                                        <button class="btn btn-primary btn-sm"
+                                onclick="update_patient({{ patient['patient_id'] }})" >Edit</button>
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -253,7 +255,51 @@
           
         </div>
     </div> 
-
+<!--edit patient record-->
+{% for patient in patients_all %}
+    
+    <div class="card-body">
+        <form id="patient-form-{{ patient['patient_id'] }}" class="patient-form" style="display:none;" method="POST" action="{{ url_for('edit_patient',p_id =patient['patient_id'])}}">
+          <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Update Patient Record</h5>
+    </div>  
+          <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="security-number-{{ patient['patient_id'] }}" class="form-label">Security Number:</label>
+                    <input type="number" class="form-control" id="security-number-{{ patient['patient_id'] }}" name="Security_number" value="{{patient['patient_securitynum']}}" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="first-name-{{ patient['patient_id'] }}" class="form-label">First Name:</label>
+                    <input type="text" class="form-control" id="first-name-{{ patient['patient_id'] }}" name="pf_name" value="{{patient['patient_fname']}}" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="last-name-{{ patient['patient_id'] }}" class="form-label">Last Name:</label>
+                    <input type="text" class="form-control" id="last-name-{{ patient['patient_id'] }}" name="pl_name" value="{{patient['patient_lname']}}" required>
+                </div>
+               
+                <div class="col-md-6">
+                    <label for="address-{{ patient['patient_id'] }}" class="form-label">Address:</label>
+                    <input type="text" class="form-control" id="address-{{ patient['patient_id'] }}" name="p_address" value="{{patient['patient_address']}}" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="phone-{{ patient['patient_id'] }}" class="form-label">Phone:</label>
+                    <input type="number" class="form-control" id="phone-{{ patient['patient_id'] }}" name="p_phone" value="{{patient['patient_phone']}}" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="email-{{ patient['patient_id'] }}" class="form-label">Email:</label>
+                    <input type="email" class="form-control" id="email-{{ patient['patient_id'] }}" name="p_email" value="{{patient['patient_email']}}" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="treatment-{{ patient['patient_id'] }}" class="form-label">Treatment:</label>
+                    <input type="text" class="form-control" id="treatment-{{ patient['patient_id'] }}" name="p_treatment" value="{{patient['patient_treatment']}}" required>
+                </div>
+                <div class="col-12">
+                    <input value="Update patient record" type="submit" class="btn btn-success mt-3 w-100">
+                </div>
+            </div>
+        </form>
+    </div>
+{% endfor %}
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
@@ -270,6 +316,19 @@
             let form = document.getElementById("editForm");
             form.style.display = form.style.display === "none" ? "block" : "none";
         }
+    function update_patient(patientId) {
+        // Hide all forms first
+        const allForms = document.querySelectorAll('.patient-form');
+        allForms.forEach(form => {
+            form.style.display = 'none';
+        });
+
+        // Find and show the correct form for the given patientId
+        const formToShow = document.getElementById('patient-form-' + patientId);
+        if (formToShow) {
+            formToShow.style.display = 'block';
+        }
+    }
 </script>
 <style>
   .content {
@@ -277,4 +336,5 @@
   }
   #editForm { display: none;  
    margin-top: 20px;}
+   
 </style>
