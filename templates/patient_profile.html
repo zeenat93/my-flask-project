@@ -1,0 +1,474 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Patient Portal</title>
+    <!-- Load Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the Inter font and overall structure */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Very light, professional background */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        main {
+            flex-grow: 1; /* Ensures the main content takes up remaining vertical space */
+        }
+        .card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'accent-green': '#059669', /* Emerald for main actions */
+                        'accent-dark': '#065f46',
+                    }
+                }
+            }
+        }
+
+        // --- Modal Control Functions ---
+
+        // Function to close the custom message box
+        function closeMessage() {
+            document.getElementById('message-box').classList.add('hidden');
+        }
+
+        // Helper function to display content in the modal
+        // This is where you would place your data formatting logic after a successful database fetch.
+        function showModal(title, contentHtml) {
+            document.getElementById('message-box').classList.remove('hidden');
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-content').innerHTML = contentHtml;
+            
+        }
+
+        // --- Dedicated Feature Functions ---
+        
+        function showProfile() {
+            title='profile edit'
+            const content = `
+            <div class="space-y-4">
+        
+       
+                <div class="space-y-3">
+                    <p><strong>Name:</strong> {{ session['patient_name'] }} (P1001)</p>
+                    
+                    <p><strong>social security number:</strong> {{ patient_info.patient_securitynum}}</p>
+                    <p><strong>first name</strong> {{ patient_info.patient_fname}}</p>
+                    <p><strong>Last Name:</strong> {{ patient_info.patient_lname}}</p>
+                    <p><strong>Gender:</strong> {{ patient_info.gender}}</p>
+                    <p><strong>Address:</strong> {{ patient_info.patient_address}}</p>
+                    <p><strong>Phone Number:</strong> {{ patient_info.patient_phone}}</p>
+                    <p><strong>Address:</strong> {{ patient_info.patient_email}}</p>
+                    <p><strong>Email:</strong> {{ patient_info.patient_allergies}}</p>
+                    <p><strong>Allergies:</strong> {{ patient_info.patient_illness}}</p>
+                    <p><strong>Illness:</strong> {{ patient_info.patient_treatment}}</p>
+                </div>
+                 <div class="space-y-4">
+        <div class="flex justify-end">
+            <button id="edit-profile-btn" 
+                    class="edit-btn bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold py-1.5 px-4 rounded-lg shadow transition duration-150">
+                <i class="fas fa-edit mr-1"></i> Edit Info
+            </button>
+        </div>
+            `;
+            const closeBtn = document.getElementById('modal-close-btn');
+    if (closeBtn) {
+        closeBtn.classList.remove('hidden'); 
+    }
+    
+    document.getElementById('modal-title').textContent=title;
+    document.getElementById('modal-content').innerHTML=content;
+    document.getElementById('message-box').classList.remove('hidden')
+    const editButton = document.getElementById('edit-profile-btn');
+    if (editButton) {
+        editButton.addEventListener('click', editPatientInfo);
+    }
+
+        }
+        
+
+
+        function editPatientInfo() {
+    // 1. Hide the original close button when entering the edit view
+    const closeBtn = document.getElementById('modal-close-btn');
+    if (closeBtn) {
+        closeBtn.classList.add('hidden');
+    }
+    
+    // Set the modal title to reflect the editing action
+    document.getElementById('modal-title').textContent = 'Edit Patient Profile';
+    
+    // Define the form content using template literals for pre-population
+    const editFormContent = `
+        <form id="patient-edit-form" class="space-y-4">
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                <div class="col-span-1">
+                    <label for="fname" class="block text-sm font-medium text-gray-700">First Name</label>
+                    <input type="text" id="fname" name="patient_fname" 
+                            value="{{ patient_info.patient_fname}}" 
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+                </div>
+                
+                <div class="col-span-1">
+                    <label for="lname" class="block text-sm font-medium text-gray-700">Last Name</label>
+                    <input type="text" id="lname" name="patient_lname" 
+                            value="{{ patient_info.patient_lname}}" 
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+                </div>
+                
+                <div class="col-span-1">
+                    <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                    <input type="tel" id="phone" name="patient_phone" 
+                            value="{{ patient_info.patient_phone}}" 
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+                </div>
+                
+                <div class="col-span-1">
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="email" name="patient_email" 
+                            value="{{ patient_info.patient_email}}" 
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+                </div>
+
+                <div class="col-span-1">
+                    <label for="ssn" class="block text-sm font-medium text-gray-700">Social Security Number</label>
+                    <input type="text" id="ssn" name="patient_securitynum" 
+                            value="{{ patient_info.patient_securitynum}}" 
+                            readonly 
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100 text-gray-500 sm:text-sm p-2 border">
+                </div>
+
+                <div class="col-span-1">
+                    <label for="gender" class="block text-sm font-medium text-gray-700">Gender</label>
+                    <input type="text" id="gender" name="gender" 
+                            value="{{ patient_info.gender}}" 
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">
+                </div>
+
+                <div class="col-span-full">
+                    <label for="address" class="block text-sm font-medium text-gray-700">Address</label>
+                    <textarea id="address" name="patient_address" rows="2"
+                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">{{ patient_info.patient_address}}</textarea>
+                </div>
+                
+                <div class="col-span-full">
+                    <label for="allergies" class="block text-sm font-medium text-gray-700">Allergies</label>
+                    <textarea id="allergies" name="patient_allergies" rows="2"
+                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">{{ patient_info.patient_allergies}}</textarea>
+                </div>
+                
+                <div class="col-span-full">
+                    <label for="illness" class="block text-sm font-medium text-gray-700">Illness/Treatment History</label>
+                    <textarea id="illness" name="patient_illness" rows="3"
+                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border">{{ patient_info.patient_illness}}</textarea>
+                </div>
+
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-4 border-t mt-4">
+                <button type="button" onclick="closeMessage(); showProfile();" 
+                         class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition duration-150">
+                    Cancel
+                </button>
+                <button type="submit" 
+                         class="px-4 py-2 text-sm font-medium text-white bg-accent-green rounded-lg hover:bg-accent-dark transition duration-150">
+                    Save Changes
+                </button>
+            </div>
+        </form>
+    `;
+
+    // Inject the form into the modal
+    document.getElementById('modal-content').innerHTML = editFormContent;
+
+    // 2. Add the actual form submission listener for AJAX/Fetch
+    document.getElementById('patient-edit-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Use FormData to easily capture all form fields
+        const formData = new FormData(this);
+        const patientData = Object.fromEntries(formData.entries());
+
+        // Send the data to your Flask/Python backend
+        fetch('/update_patient_info', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(patientData),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Success: Close the modal and show a success message or re-fetch profile
+                alert('Patient profile updated successfully!');
+                closeMessage(); // This assumes closeMessage() completely closes the modal
+                // Ideally, you'd reload the page or update the patient_info object
+            } else {
+                // Failure: Show the error message from the server
+                alert('Update failed: ' + (data.message || 'Unknown error.'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while communicating with the server.');
+        });
+    });
+}
+
+
+
+        function showAppointments() {
+    // 1. Prepare the Dynamic Content (This is the same as before)
+    const titleText = 'Your Appointments'; 
+    const contentHTML = `
+       <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+    <h4 class="text-xl font-bold text-indigo-700 mb-4 border-b pb-2">
+        <i class="fas fa-calendar-check mr-2"></i>  Appointments
+    </h4>
+
+    {% if p_info %}
+        <div class="space-y-6">
+            {% for appointment in p_info %}
+                
+                <div class="p-4 border-l-4 border-indigo-500 bg-indigo-50 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                    
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-sm font-medium text-gray-500">
+                            <i class="far fa-calendar-alt mr-1"></i> Date:
+                            <span class="text-indigo-600 font-semibold text-base">{{ appointment.appointment_date }}</span>
+                        </span>
+                        <span class="text-sm font-medium text-gray-500">
+                            <i class="fas fa-user-md mr-1"></i> Doctor:
+                            <span class="text-gray-800 font-semibold text-base">{{ appointment.doctor_name }}</span>
+                        </span>
+                    </div>
+
+                    <dl class="space-y-1">
+                        <div class="flex items-start">
+                            <dt class="w-32 text-sm font-medium text-gray-600">Diagnosis/Plan:</dt>
+                            <dd class="flex-1 text-sm text-gray-800">{{ appointment.diago_treatment }}</dd>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <dt class="w-32 text-sm font-medium text-gray-600">Notes:</dt>
+                            <dd class="flex-1 text-sm italic text-gray-600 border-t border-gray-200 pt-1 mt-1">{{ appointment.note }}</dd>
+                        </div>
+                    </dl>
+                </div>
+                {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-gray-500 italic p-4 bg-gray-50 rounded-lg">You have no upcoming appointments scheduled.</p>
+    {% endif %}
+</div>
+    `;
+
+    // 2. Insert Content into the Modal Elements (The showModal logic is now here)
+    document.getElementById('modal-title').textContent = titleText;
+    document.getElementById('modal-content').innerHTML = contentHTML;
+
+    // 3. Display the Modal
+    document.getElementById('message-box').classList.remove('hidden');
+}
+
+        
+
+        function showLabResults() {
+            // Placeholder content simulating data fetched from a 'lab_results' database table
+            const content = `
+                <h4 class="font-semibold text-gray-700 mb-3">Recent Results:</h4>
+                <div class="bg-yellow-50 p-3 rounded-xl border border-yellow-200">
+                    <p class="font-medium text-yellow-800">New Result: Complete Blood Count (CBC) - Dated 2025-10-01</p>
+                    <p class="text-sm mt-1">Review required: Iron levels were slightly low.</p>
+                </div>
+                <ul class="mt-4 text-sm text-gray-600 space-y-1">
+                    <li>Thyroid Panel: Normal (2025-08-15)</li>
+                    <li>Cholesterol: Optimal (2025-07-20)</li>
+                </ul>
+            `;
+            showModal('Latest Lab Results', content);
+        }
+
+        function showMessages() {
+            // Placeholder content simulating data fetched from a 'messages' database table
+            const content = `
+                <h4 class="font-semibold text-gray-700 mb-3">Inbox:</h4>
+                <div class="border-b pb-2 mb-2">
+                    <p class="font-medium text-blue-700">Dr. Johnson: <span class="text-gray-900">RE: CBC Follow-up</span></p>
+                    <p class="text-sm text-gray-500">Please schedule a call to discuss your iron levels.</p>
+                </div>
+                <div class="border-b pb-2 mb-2">
+                    <p class="font-medium text-gray-700">Billing: <span class="text-gray-900">Statement Available</span></p>
+                    <p class="text-sm text-gray-500">Your September statement is ready for review.</p>
+                </div>
+                <button class="text-sm bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition mt-3">Compose New Message</button>
+            `;
+            showModal('Secure Messages', content);
+        }
+        function showprescription(){
+            const title= 'Here is your Prescription';
+            const content= ` <div class="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+    <h4 class="text-xl font-bold text-indigo-700 mb-4 border-b pb-2">
+        <i class="fas fa-calendar-check mr-2"></i>  Appointments
+    </h4>
+
+    {% if p_pres_info %}
+        <div class="space-y-6">
+            {% for appointment in p_pres_info %}
+                
+                <div class="p-4 border-l-4 border-indigo-500 bg-indigo-50 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                    
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-sm font-medium text-gray-500">
+                            <i class="far fa-calendar-alt mr-1"></i> Date:
+                            <span class="text-indigo-600 font-semibold text-base">{{ appointment.prescription_date }}</span>
+                        </span>
+                        <span class="text-sm font-medium text-gray-500">
+                            <i class="fas fa-user-md mr-1"></i> Doctor:
+                            <span class="text-gray-800 font-semibold text-base">{{ appointment.doctor_name }}</span>
+                        </span>
+                    </div>
+
+                    <dl class="space-y-1">
+                        <div class="flex items-start">
+                            <dt class="w-32 text-sm font-medium text-gray-600">Diagnosis/Plan:</dt>
+                            <dd class="flex-1 text-sm text-gray-800">{{ appointment.medicine }}</dd>
+                        </div>
+                        
+                        <div class="flex items-start">
+                            <dt class="w-32 text-sm font-medium text-gray-600">Notes:</dt>
+                            <dd class="flex-1 text-sm italic text-gray-600 border-t border-gray-200 pt-1 mt-1">{{ appointment.strength }}</dd>
+                        </div>
+                    </dl>
+                </div>
+                {% endfor %}
+        </div>
+    {% else %}
+        <p class="text-gray-500 italic p-4 bg-gray-50 rounded-lg">You have no upcoming appointments scheduled.</p>
+    {% endif %}
+</div>
+            `;
+            document.getElementById('modal-title').textContent=title;
+            document.getElementById('modal-content').innerHTML=content;
+            document.getElementById('message-box').classList.remove('hidden')
+        }
+    </script>
+</head>
+<body>
+
+    <!-- Custom Modal/Message Box (Replaces alert()) -->
+    <div id="message-box" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-lg w-full"> <!-- Increased width for detailed content -->
+            <!-- Modal Title -->
+            <h3 id="modal-title" class="text-2xl font-bold text-accent-green mb-4">Loading...</h3>
+            
+            <!-- Modal Content (where dynamic data is inserted) -->
+            <div id="modal-content" class="text-gray-700 mb-6 p-4 border border-gray-200 rounded-xl bg-gray-50">Content goes here...</div>
+            
+            <!-- Close Button -->
+            <button onclick="closeMessage()" id="modal-close-btn" class="w-full bg-accent-green hover:bg-accent-dark text-white font-bold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-green transition duration-150">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-accent-green">Patient Home</h1>
+            <div class="flex items-center space-x-4">
+                <span class="hidden sm:inline text-gray-600">Welcome,<b class="text-lg font-bold text-accent-green ml-1">{{ session['patient_name'] }} </b></span>
+                <!-- Logout Link (Correctly using href) -->
+                <a href="{{ url_for('patient_logout')}}" class="text-red-600 hover:text-red-800 font-medium transition duration-150" role="button">
+                    Logout
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area (Menu in the Middle) -->
+    <main class="py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-3xl font-extrabold text-gray-800 mb-8 text-center">Dashboard & Quick Actions</h2>
+            
+            <!-- Central Menu Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
+
+                <!-- Menu Item 6: Profile (Uses dedicated showProfile() function) -->
+                <button onclick="showProfile()" class="card bg-white p-6 rounded-xl text-left border border-gray-200 hover:border-accent-green shadow-lg">
+                    <div class="text-accent-green mb-3">
+                        <!-- Icon for Profile -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.98 5.98 0 0010 16a5.979 5.979 0 004.546-2.084A5 5 0 0010 11z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900">My Profile</h3>
+                    <p class="text-gray-500 mt-1 text-sm">{{ patient_info.patient_address}}</p>
+                </button>
+
+                <!-- Menu Item 1: Appointments (Uses dedicated showAppointments() function) -->
+                <button onclick="showAppointments()" class="card bg-white p-6 rounded-xl text-left border border-gray-200 hover:border-accent-green shadow-lg">
+                    <div class="text-accent-green mb-3">
+                        <!-- Icon for Appointments -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd" /></svg>
+                    </div><h3 class="text-xl font-bold text-gray-900">Appointments</h3>
+                    <p class="text-gray-500 mt-1 text-sm">View or schedule your next visit.</p>
+                </button>
+                
+
+
+
+                <!-- Menu Item 2: Test Results (Uses dedicated showLabResults() function) -->
+                <button onclick="showprescription()" class="card bg-white p-6 rounded-xl text-left border border-gray-200 hover:border-accent-green shadow-lg">
+                    <div class="text-accent-green mb-3">
+                        <!-- Icon for Test Results -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" /><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900">Prescription</h3>
+                    <p class="text-gray-500 mt-1 text-sm">See Your Prescription here.</p>
+                </button>
+                
+                <!-- Menu Item 5: Messages (Uses dedicated showMessages() function) -->
+                <button onclick="showMessages()" class="card bg-white p-6 rounded-xl text-left border border-gray-200 hover:border-accent-green shadow-lg">
+                    <div class="text-accent-green mb-3">
+                        <!-- Icon for Messages -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900">Secure Messages</h3>
+                    <p class="text-gray-500 mt-1 text-sm">Contact your care team directly.</p>
+                </button>
+                
+            </div>
+            
+            
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white mt-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center">
+            <p class="text-sm">&copy; 2025 Secure Patient Portal. For emergencies, please call 911 immediately.</p>
+            <div class="mt-1 space-x-4 text-xs">
+                <a href="#" class="hover:text-accent-green transition duration-150" onclick="showModal('Privacy', '<p>This is the Privacy Policy content.</p>')">Privacy Policy</a>
+                <span class="text-gray-500">|</span>
+                <a href="#" class="hover:text-accent-green transition duration-150" onclick="showModal('Support', '<p>Contact support at 555-HELP or use the Secure Messages tool.</p>')">Support</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

@@ -45,7 +45,7 @@
             <a class="nav-link" href="#" onclick="showContent(event, 'view_patient')">Patients</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#history">Appointment </a>
+            <a class="nav-link" href="#history" onclick="showContent(event, 'medical_record')">Medical History </a>
           </li>
         </ul>
       </div>
@@ -300,11 +300,66 @@
         </form>
     </div>
 {% endfor %}
+<!--patient medical history-->
+<div id="medical_record" class="content">
+        <h2 class="text-center mb-4">Patients Records</h2>
+        <div class="table-responsive">
+          
+            <table class="table table-bordered table-striped align-middle">
+                <thead class="table-dark">
+                        <th scope="col">ID</th>
+                        <th scope="col">Security Number</th>
+                        <th scope="col">First Name</th>
+                        <th scope="col">Last Name</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+    {% if patients_all %}
+        {% for x in patients_all %}
+            
+            <tr>
+                <td>{{ x.patient_id }}</td>
+                <td>{{ x.patient_securitynum }}</td>
+                <td>{{ x.patient_fname }}</td>
+                <td>{{ x.patient_lname }}</td>
+                
+                <td>
+                    <button class="btn btn-info btn-sm view-patient-record" 
+                            data-patient-id="{{x.patient_id}}">
+                        View Record
+                    </button>
+                </td>
+                
+                </tr>
+            <tr class="record-row" id="record-row-{{x.patient_id}}" style="display:none;">
+                <td colspan="5"> 
+                    <div id="record-details-{{x.patient_id}}" class="p-3 bg-light border">
+                        </div>
+                </td>
+            </tr>
+            {% endfor %}
+    {% else %}
+        <tr>
+            <td colspan="5" class="text-center">No patient records found. The database table might be empty.</td>
+        </tr>
+    {% endif %}
+</tbody>
+            </table>
+           {% for y in appoint_pres %}
+    <div  id="show{{y.patient_id}}" class="open" style="display: none;">{{y.patient_id }}</div>
+    {% endfor %}
+        </div>
+    </div> 
+   
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
 <script>
+// fist funtion
   function showContent(event, section) {
     event.preventDefault();
     document.querySelectorAll('.content').forEach(div => {
@@ -312,10 +367,12 @@
     });
     document.getElementById(section).style.display = "block";
   }
+// second function
   function toggleEditForm() { 
             let form = document.getElementById("editForm");
             form.style.display = form.style.display === "none" ? "block" : "none";
         }
+// third function
     function update_patient(patientId) {
         // Hide all forms first
         const allForms = document.querySelectorAll('.patient-form');
@@ -329,6 +386,69 @@
             formToShow.style.display = 'block';
         }
     }
+// fourth function
+function medical_record(record_id)
+{
+    // 1. Hide ALL elements with the class 'open' (the global reset)
+    const allRecords = document.querySelectorAll('.open');
+    allRecords.forEach(element => {
+        element.style.display = 'none';
+    });
+
+    // 2. Only attempt to show a specific element if a valid ID (not null) is passed
+    if (record_id) { 
+        // Constructs the ID (e.g., 'show123')
+        let targetElement = document.getElementById('show' + record_id);
+        
+        if (targetElement) {
+            targetElement.style.display = 'block'; // Shows the target element
+          }
+    }
+}
+// 5th function
+// Function that handle the AJAX call for medical history
+$(document).ready(function() {
+    
+    // Target the new button class
+    $('.view-patient-record').click(function() {
+        
+        var patientId = $(this).data('patient-id'); //Purpose: The script now knows which patient's record to load.
+        var $resultRow = $('#record-row-' + patientId);
+        var $resultDiv = $('#record-details-' + patientId);
+        
+        // Toggle the visibility of the detail row
+        if ($resultRow.is(':visible') && $resultDiv.html() !== 'Loading...') {
+            $resultRow.hide();
+            return; // Exit if already showing and clicked again
+        }
+        
+        // 1. Show the result area and loading message
+        $resultRow.show();
+        $resultDiv.html('<strong>Loading medical record...</strong>');
+
+        // 2. Perform the AJAX POST request
+        $.ajax({
+            type: 'POST',
+            url: '{{ url_for("get_medical_history") }}', // The new Flask route, function name
+            contentType: 'application/json',
+            data: JSON.stringify({
+                'patient_id': patientId
+            }),
+            success: function(response) {
+                // Success: Inject the rendered HTML snippet into the div
+                if (response.status === 'success') {
+                    $resultDiv.html(response.html);
+                } else {
+                    $resultDiv.html('<div class="alert alert-danger">Error: ' + response.html + '</div>');
+                }
+            },
+            error: function() {
+                $resultDiv.html('<div class="alert alert-danger">Failed to fetch data from server.</div>');
+            }
+        });
+    });
+});
+
 </script>
 <style>
   .content {

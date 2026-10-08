@@ -1,8 +1,6 @@
-from flask import Flask , render_template, request, redirect, url_for, session, flash, make_response
+from flask import Flask , render_template, request, redirect,jsonify, url_for, session, flash, make_response
 from db import connection
 from functools import wraps
-
-
 app = Flask (__name__)
 app.secret_key ='your key'
 def no_cache(view):
@@ -18,10 +16,157 @@ def no_cache(view):
 @app.route("/")
 def home():
     return render_template("index.html")
+@app.route('/patient', methods=['POST','GET'])  # route for patient.html
+def patient_login():
+    if request.method== 'POST':
+        p_num=request.form['patient_snum']
+        try:
+            conn=connection()
+            cursor=conn.cursor(dictionary=True)
+            p_login_q="select * from patient where patient_securitynum=%s"
+            cursor.execute(p_login_q,(p_num,))
+            patient_log=cursor.fetchone()
+            if patient_log:
+                session['patient_key']= patient_log['patient_securitynum']
+                session['patient_name']= patient_log['patient_fname']
+                session['patient_id']= patient_log['patient_id']
+                flash("patient logged in successfully")
+                return redirect(url_for('patient_profile'))
+            else: 
+                flash("Invalid security key")
+                return render_template("patient.html")
+        except Exception as e:
+            flash(f"this is the error {e}")
+        finally :
+            cursor.close()
+            conn.close()
 
-@app.route('/patient')  # route for patient.html
-def patien():
     return render_template("patient.html")
+@app.route('/p_logout')
+def patient_logout():
+    session.clear()
+    return redirect(url_for('home'))
+@app.route('/patient_profile')
+def patient_profile():
+    if 'patient_name' in session and 'patient_id' in session:
+        p_login_id= session['patient_id']
+        conn=connection()
+        cursor= conn.cursor(dictionary=True)
+        p_profile="select * from patient where patient_id =%s"
+        cursor.execute(p_profile,(p_login_id,))
+        p_login_profile=cursor.fetchone()
+        #fetching appointments which user is logged in 
+        p_opp = "SELECT p.note,p.appointment_date,p.diago_treatment, doctor_name FROM doctors as d join  appointments as p ON d.doctor_id = p.doctor_id WHERE patient_id = %s"
+        cursor.execute(p_opp, (session['patient_id'],))
+        p_appointment = cursor.fetchall()
+        p_pres= "select s.prescription_date,s.medicine,s.strength,s.instructions,s.duration,d.doctor_name from doctors as d Join prescription as s on s.doctor_id=d.doctor_id Where patient_id =%s"
+        cursor.execute(p_pres, (session['patient_id'],))
+        p_prescription = cursor.fetchall()
+
+        if not p_login_profile:
+            session.clear()
+            flash("User not found. Please log in again.")
+            return redirect(url_for('patient_login'))
+        return render_template("patient_profile.html", patient_info =p_login_profile,p_info=p_appointment, p_pres_info=p_prescription)
+    else:
+        return redirect(url_for('patient_login'))
+@app.route ('/p_appointments')
+def patient_appoint():
+    conn = None
+    cursor = None
+    try:
+        conn = connection()
+        cursor = conn.cursor(dictionary=True)
+        p_opp = "SELECT * FROM appointments WHERE patient_id = %s"
+        cursor.execute(p_opp, (session['patient_id'],))
+        p_appointment = cursor.fetchone()
+        
+        return render_template("patient_profile.html", p_info=p_appointment)
+    
+    except Exception as e:
+        return (f"An error occurred: {e}")
+    
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conn is not None:
+            conn.close()
+
+@app.route('/update_patient_info', methods=['POST'])
+def update_patient_info():
+    """
+    Handles the AJAX request (JSON data) to update patient information in the database.
+    This function is now based on your connection structure.
+    """
+    conn = None
+    cursor = None
+    
+    try:
+        # 1. Get the JSON data sent from the JavaScript fetch()
+        data = request.get_json()
+        
+        # 2. Map form field names (from JS) to Python variables
+        Security_number = data.get('patient_securitynum') # Used as WHERE clause ID
+        pf_name = data.get('patient_fname')
+        pl_name = data.get('patient_lname')
+        p_address = data.get('patient_address')
+        p_phone = data.get('patient_phone')
+        p_email = data.get('patient_email')
+        p_allergies = data.get('patient_allergies')
+        p_illness = data.get('patient_illness')
+        p_gender = data.get('gender')
+        
+     
+        if not Security_number:
+             return jsonify({'success': False, 'message': 'Patient Security Number is missing.'}), 400
+
+        conn = connection()
+        cursor = conn.cursor(dictionary=True) # Use dictionary=True for consistency
+
+        p_query = """
+            UPDATE patient 
+            SET patient_fname = %s, 
+                patient_lname = %s, 
+                patient_address = %s, 
+                patient_phone = %s, 
+                patient_email = %s, 
+                patient_allergies = %s, 
+                patient_illness = %s,
+                gender = %s
+            WHERE patient_securitynum = %s
+        """
+        
+        values_to_update = (
+            pf_name, pl_name, p_address, p_phone, p_email, p_allergies, 
+            p_illness, p_gender, Security_number # <-- SSN is last for the WHERE
+        )
+
+        cursor.execute(p_query, values_to_update)
+        rows_affected = cursor.rowcount
+        conn.commit()
+        
+        if rows_affected > 0:
+            # Send a success response back to the JavaScript
+            return jsonify({'success': True, 'message': 'Patient record is updated successfully.'})
+        else:
+            # This indicates either the SSN was not found or no data was actually changed
+            return jsonify({'success': False, 'message': 'Update failed. Patient not found or no new data provided.'}), 404
+            
+    except Exception as e:
+        # Rollback changes if an error occurred
+        if conn:
+            conn.rollback()
+        print(f"Server Error: {e}")
+        # Return a JSON error message to the JavaScript
+        return jsonify({'success': False, 'message': f'A server error occurred: {e}'}), 500
+        
+    finally:
+        # Ensure resources are closed
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 
 @app.route('/dr', methods=['GET', 'POST'])
 def login():
@@ -59,12 +204,14 @@ def dr_profile():
         query_patient = "SELECT * FROM patient" 
         cursor.execute(query_patient)
         patients_data = cursor.fetchall()
-       
+        query_ap="select patient_id ,doctor_id,diago_treatment from appointments"
+        cursor.execute(query_ap)
+        query_appoint= cursor.fetchall()
         if not user_info:
             session.clear()
             flash("User not found. Please log in again.")
             return redirect(url_for('login'))
-        return render_template("dr_profile.html", doctor_info=user_info, patients_all=patients_data )
+        return render_template("dr_profile.html", doctor_info=user_info, patients_all=patients_data,appoint_pres=query_appoint )
     else:
         return redirect(url_for('login'))
 @app.route('/logout')
@@ -99,7 +246,7 @@ def edit_dr(doctor_id):
     conn.close()
     flash("Profile updated successfully!")
     return render_template("dr_profile.html", doctor_info=doctor_info , patients_all=patients_data)
-@app.route("/register_new_patient")
+@app.route("/register_new_patient" , methods=['GET', 'POST'])
 def patient_registers():
     if request.method == 'POST':
         pid = request.form["pid"]
@@ -214,10 +361,7 @@ def show_patients():
         query_patient = "SELECT * FROM patient" 
         cursor.execute(query_patient)
         patients_data = cursor.fetchall()
-
-        # >>> ADDED THIS LINE FOR DEBUGGING <<<
         print("Fetched patients data:", patients_data)
-
         flash("Here are all the patients.")
         return render_template('dr_profile.html', patients_all=patients_data)
     except Exception as e:
@@ -264,6 +408,74 @@ def  edit_patient(p_id):
         finally:
             cursor.close()
             conn.close()
+
+# In your app.py file
+
+@app.route('/get_medical_history', methods=['POST'])
+def get_medical_history():
+    data = request.get_json()
+    patient_id = data.get('patient_id')
+    
+    if patient_id is None:
+        return jsonify({'html': 'Patient ID not provided.', 'status': 'error'}), 400
+
+    conn = None
+    cursor = None
+    try:
+        conn = connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # 1. Fetch Appointments/Diagnosis, INCLUDING the Doctor's Name
+        appointment_query = """
+            SELECT 
+                a.appointment_date, 
+                a.diago_treatment, 
+                a.note, 
+                d.doctor_name 
+            FROM appointments a
+            JOIN doctors d ON a.doctor_id = d.doctor_id
+            WHERE a.patient_id = %s 
+            ORDER BY a.appointment_date DESC
+        """
+        cursor.execute(appointment_query, (patient_id,))
+        appointments = cursor.fetchall()
+        
+        # 2. Fetch Prescriptions, INCLUDING the Doctor's Name
+        prescription_query = """
+            SELECT 
+                p.prescription_date, 
+                p.medicine, 
+                p.strength, 
+                p.duration, 
+                p.instructions,
+                d.doctor_name
+            FROM prescription p
+            JOIN doctors d ON p.doctor_id = d.doctor_id
+            WHERE p.patient_id = %s 
+            ORDER BY p.prescription_date DESC
+        """
+        cursor.execute(prescription_query, (patient_id,))
+        prescriptions = cursor.fetchall()
+        
+        # Render the template snippet with the new data
+        html_content = render_template(
+            "medical_history_snippet.html", 
+            appointments=appointments, 
+            prescriptions=prescriptions
+        )
+        
+        return jsonify({'html': html_content, 'status': 'success'})
+        
+    except Exception as e:
+        print(f"Error fetching medical history: {e}")
+        return jsonify({'html': f'<p class="text-danger">An error occurred: {e}</p>', 'status': 'error'}), 500
+        
+    finally:
+        if cursor: cursor.close()
+        if conn: conn.close()   
+import os
 if __name__ == "__main__":
-    app.run(debug=True)
+    #app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
  
